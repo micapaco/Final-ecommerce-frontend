@@ -137,13 +137,17 @@ const Checkout = () => {
 
       await Promise.all(orderDetailsPromises);
 
-      // Actualizar stock de cada producto comprado
-      const stockUpdatePromises = cart.map(async (item) => {
-        const currentProduct = await productsAPI.getById(item.id_key);
-        const newStock = Math.max(0, currentProduct.stock - item.quantity);
-        return productsAPI.update(item.id_key, { ...currentProduct, stock: newStock });
-      });
-      await Promise.all(stockUpdatePromises);
+      // Actualizar stock de cada producto comprado (no bloquea la compra si falla)
+      try {
+        const stockUpdatePromises = cart.map(async (item) => {
+          const currentProduct = await productsAPI.getById(item.id_key);
+          const newStock = Math.max(0, currentProduct.stock - item.quantity);
+          return productsAPI.update(item.id_key, { ...currentProduct, stock: newStock });
+        });
+        await Promise.all(stockUpdatePromises);
+      } catch (stockError) {
+        console.warn('No se pudo actualizar el stock desde el frontend:', stockError);
+      }
 
       clearCart();
       navigate('/checkout/success', { state: { orderId: createdOrder.id_key } });
