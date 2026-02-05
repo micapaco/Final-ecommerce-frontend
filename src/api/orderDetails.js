@@ -55,7 +55,7 @@ export const getById = async (id) => {
  */
 export const create = async (orderDetailData) => {
   try {
-    const response = await apiClient.post('/order_details', orderDetailData);
+    const response = await apiClient.post('/order_details/', orderDetailData);
     cacheClear('orderDetail');
     return response.data;
   } catch (error) {
