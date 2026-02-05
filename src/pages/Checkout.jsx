@@ -6,6 +6,7 @@ import { ShoppingBag, CreditCard, Truck, MapPin, Package, Ticket, Plus, Minus, A
 import * as billsAPI from '../api/bills';
 import * as ordersAPI from '../api/orders';
 import * as orderDetailsAPI from '../api/orderDetails';
+import * as productsAPI from '../api/products';
 import { getByClientId as getAddressesByClient } from '../api/addresses';
 
 const Checkout = () => {
@@ -135,6 +136,15 @@ const Checkout = () => {
       });
 
       await Promise.all(orderDetailsPromises);
+
+      // Actualizar stock de cada producto comprado
+      const stockUpdatePromises = cart.map(async (item) => {
+        const currentProduct = await productsAPI.getById(item.id_key);
+        const newStock = Math.max(0, currentProduct.stock - item.quantity);
+        return productsAPI.update(item.id_key, { ...currentProduct, stock: newStock });
+      });
+      await Promise.all(stockUpdatePromises);
+
       clearCart();
       navigate('/checkout/success', { state: { orderId: createdOrder.id_key } });
     } catch (error) {
