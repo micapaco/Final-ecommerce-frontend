@@ -67,7 +67,7 @@ export const update = async (id, orderData) => {
  */
 export const updateStatus = async (id, status) => {
   try {
-    const response = await apiClient.patch(`/orders/${id}/status`, { status });
+    const response = await apiClient.patch(`/orders/${id}/status/`, { status });
     cacheClear('order');
     cacheClear('orders');
     return response.data;
