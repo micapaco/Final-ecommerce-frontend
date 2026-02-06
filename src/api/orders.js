@@ -63,11 +63,12 @@ export const update = async (id, orderData) => {
 };
 
 /**
- * Actualizar estado de orden - limpia caché
+ * Actualizar estado de orden - usa PUT con datos completos
  */
 export const updateStatus = async (id, status) => {
   try {
-    const response = await apiClient.patch(`/orders/${id}/status/`, { status });
+    const order = await getById(id);
+    const response = await apiClient.put(`/orders/${id}`, { ...order, status });
     cacheClear('order');
     cacheClear('orders');
     return response.data;
