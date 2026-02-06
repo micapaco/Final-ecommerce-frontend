@@ -6,8 +6,8 @@ import { ShoppingBag, CreditCard, Truck, MapPin, Package, Ticket, Plus, Minus, A
 import * as billsAPI from '../api/bills';
 import * as ordersAPI from '../api/orders';
 import * as orderDetailsAPI from '../api/orderDetails';
-import * as productsAPI from '../api/products';
 import { getByClientId as getAddressesByClient } from '../api/addresses';
+import { cacheClear } from '../api/utils';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -137,17 +137,8 @@ const Checkout = () => {
 
       await Promise.all(orderDetailsPromises);
 
-      // Actualizar stock de cada producto comprado (no bloquea la compra si falla)
-      try {
-        const stockUpdatePromises = cart.map(async (item) => {
-          const currentProduct = await productsAPI.getById(item.id_key);
-          const newStock = Math.max(0, currentProduct.stock - item.quantity);
-          return productsAPI.update(item.id_key, { ...currentProduct, stock: newStock });
-        });
-        await Promise.all(stockUpdatePromises);
-      } catch (stockError) {
-        console.warn('No se pudo actualizar el stock desde el frontend:', stockError);
-      }
+      // Limpiar caché de productos para que se vea el stock actualizado por el backend
+      cacheClear('product');
 
       clearCart();
       navigate('/checkout/success', { state: { orderId: createdOrder.id_key } });
