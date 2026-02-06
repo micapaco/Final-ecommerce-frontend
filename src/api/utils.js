@@ -48,6 +48,46 @@ export const cacheClear = (keyPattern) => {
 };
 
 // ==========================================
+// SISTEMA DE EVENTOS PARA RECARGA DE DATOS
+// ==========================================
+const eventListeners = new Map();
+
+/**
+ * Suscribirse a eventos de cambio de datos
+ * @param {string} eventType - Tipo de evento (ej: 'products', 'orders')
+ * @param {Function} callback - Función a ejecutar cuando ocurra el evento
+ * @returns {Function} - Función para desuscribirse
+ */
+export const subscribeToChanges = (eventType, callback) => {
+    if (!eventListeners.has(eventType)) {
+        eventListeners.set(eventType, new Set());
+    }
+    eventListeners.get(eventType).add(callback);
+
+    // Retornar función para desuscribirse
+    return () => {
+        eventListeners.get(eventType)?.delete(callback);
+    };
+};
+
+/**
+ * Notificar que hubo un cambio en los datos
+ * @param {string} eventType - Tipo de evento (ej: 'products', 'orders')
+ */
+export const notifyDataChange = (eventType) => {
+    const listeners = eventListeners.get(eventType);
+    if (listeners) {
+        listeners.forEach(callback => {
+            try {
+                callback();
+            } catch (e) {
+                console.error('Error en listener de cambio:', e);
+            }
+        });
+    }
+};
+
+// ==========================================
 // DEBOUNCE (Retardo de ejecución)
 // ==========================================
 export const debounce = (func, wait = 300) => {

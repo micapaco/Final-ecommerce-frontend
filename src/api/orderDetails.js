@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { fetchWithOptimizations, cacheClear } from './utils';
+import { fetchWithOptimizations, cacheClear, notifyDataChange } from './utils';
 
 /**
  * Obtener todos los detalles de órdenes con caché
@@ -59,6 +59,8 @@ export const create = async (orderDetailData) => {
     cacheClear('orderDetail');
     // Limpiar caché de productos porque el backend descuenta el stock
     cacheClear('product');
+    // Notificar a los componentes que deben recargar los productos
+    notifyDataChange('products');
     return response.data;
   } catch (error) {
     console.error('Error al crear detalle de orden:', error);
@@ -75,6 +77,8 @@ export const update = async (id, orderDetailData) => {
     cacheClear('orderDetail');
     // Limpiar caché de productos porque el backend ajusta el stock
     cacheClear('product');
+    // Notificar a los componentes que deben recargar los productos
+    notifyDataChange('products');
     return response.data;
   } catch (error) {
     console.error(`Error al actualizar detalle de orden ${id}:`, error);
@@ -91,6 +95,8 @@ export const deleteOrderDetail = async (id) => {
     cacheClear('orderDetail');
     // Limpiar caché de productos porque el backend restaura el stock
     cacheClear('product');
+    // Notificar a los componentes que deben recargar los productos
+    notifyDataChange('products');
   } catch (error) {
     console.error(`Error al eliminar detalle de orden ${id}:`, error);
     throw error;

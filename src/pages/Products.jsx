@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Star, Filter, X, Sparkles, Search } from 'lucide-react';
 import { getAll as getAllProducts } from '../api/products';
 import { getAll as getAllCategories } from '../api/categories';
 import { getAll as getAllReviews } from '../api/reviews';
+import { subscribeToChanges } from '../api/utils';
 import { useCart } from '../context/CartContext';
 
 // Esqueleto de carga para productos
@@ -43,33 +44,41 @@ const Products = () => {
     const [reviewsByProduct, setReviewsByProduct] = useState({});
     const { addToCart } = useCart();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const [productsData, categoriesData, reviewsData] = await Promise.all([
-                    getAllProducts(),
-                    getAllCategories(),
-                    getAllReviews()
-                ]);
-                setProducts(productsData);
-                setCategories(categoriesData);
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [productsData, categoriesData, reviewsData] = await Promise.all([
+                getAllProducts(),
+                getAllCategories(),
+                getAllReviews()
+            ]);
+            setProducts(productsData);
+            setCategories(categoriesData);
 
-                // Agrupar reseñas por producto
-                const grouped = {};
-                reviewsData.forEach(r => {
-                    if (!grouped[r.product_id]) grouped[r.product_id] = [];
-                    grouped[r.product_id].push(r);
-                });
-                setReviewsByProduct(grouped);
-            } catch (err) {
-                console.error('Error:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
+            // Agrupar reseñas por producto
+            const grouped = {};
+            reviewsData.forEach(r => {
+                if (!grouped[r.product_id]) grouped[r.product_id] = [];
+                grouped[r.product_id].push(r);
+            });
+            setReviewsByProduct(grouped);
+        } catch (err) {
+            console.error('Error:', err);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchData();
+
+        // Suscribirse a cambios de productos (ej: después de una compra)
+        const unsubscribe = subscribeToChanges('products', fetchData);
+
+        return () => {
+            unsubscribe();
+        };
+    }, [fetchData]);
 
     // Filtrar y ordenar productos
     const filteredProducts = useMemo(() => {
@@ -326,13 +335,12 @@ const Products = () => {
                                                 <button
                                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(product); }}
                                                     disabled={product.stock === 0}
-                                                    className={`w-full py-2.5 rounded-full font-medium text-xs transition-all duration-300 flex items-center justify-center gap-2 mt-auto ${
-                                                        product.stock === 0
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                            : addedToCart === product.id_key
-                                                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                                                                : 'bg-neutral-900 text-white hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 hover:-translate-y-0.5 active:translate-y-0'
-                                                    }`}
+                                                    className={`w-full py-2.5 rounded-full font-medium text-xs transition-all duration-300 flex items-center justify-center gap-2 mt-auto ${product.stock === 0
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                        : addedToCart === product.id_key
+                                                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                                            : 'bg-neutral-900 text-white hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 hover:-translate-y-0.5 active:translate-y-0'
+                                                        }`}
                                                 >
                                                     {addedToCart === product.id_key ? (
                                                         <><Sparkles className="w-3.5 h-3.5" /> ¡Agregado!</>

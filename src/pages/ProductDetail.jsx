@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, Star, ArrowLeft, Minus, Plus, Package, Truck, Shield, Check, Send, Edit2, Trash2, X } from 'lucide-react';
 import { getById } from '../api/products';
 import { getByProductId as getReviews, getById as getReviewById, create as createReview, update as updateReview, deleteReview } from '../api/reviews';
 import { getById as getCategoryById } from '../api/categories';
 import { getAll as getAllClients } from '../api/clients';
+import { subscribeToChanges } from '../api/utils';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,55 +37,62 @@ const ProductDetail = () => {
   const cartItem = cart.find(item => item.id_key === parseInt(id));
   const currentCartQuantity = cartItem ? cartItem.quantity : 0;
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getById(id);
-        setProduct(data);
+  const fetchProduct = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getById(id);
+      setProduct(data);
 
-        // Obtener el nombre de la categoría si existe
-        if (data.category_id) {
-          try {
-            const category = await getCategoryById(data.category_id);
-            setCategoryName(category.name);
-          } catch (catErr) {
-            console.error('Error al obtener la categoría:', catErr);
-            // Si falla, no mostramos nada de categoría
-            setCategoryName(null);
-          }
-        }
-        // Obtener reseñas y clientes
+      // Obtener el nombre de la categoría si existe
+      if (data.category_id) {
         try {
-          const [reviewsData, clientsData] = await Promise.all([
-            getReviews(id),
-            getAllClients()
-          ]);
-          setReviews(reviewsData);
-          // Crear un mapa de clientes por ID para acceso rápido
-          const clientsMap = {};
-          clientsData.forEach(client => {
-            clientsMap[client.id_key] = client;
-          });
-          setClients(clientsMap);
-        } catch (revErr) {
-          console.error('Error al obtener reseñas:', revErr);
+          const category = await getCategoryById(data.category_id);
+          setCategoryName(category.name);
+        } catch (catErr) {
+          console.error('Error al obtener la categoría:', catErr);
+          // Si falla, no mostramos nada de categoría
+          setCategoryName(null);
         }
-      } catch (err) {
-        console.error('Error al obtener el producto:', err);
-        if (err.response?.status === 404) {
-          setError('Producto no encontrado');
-        } else {
-          setError('Error al cargar el producto');
-        }
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchProduct();
+      // Obtener reseñas y clientes
+      try {
+        const [reviewsData, clientsData] = await Promise.all([
+          getReviews(id),
+          getAllClients()
+        ]);
+        setReviews(reviewsData);
+        // Crear un mapa de clientes por ID para acceso rápido
+        const clientsMap = {};
+        clientsData.forEach(client => {
+          clientsMap[client.id_key] = client;
+        });
+        setClients(clientsMap);
+      } catch (revErr) {
+        console.error('Error al obtener reseñas:', revErr);
+      }
+    } catch (err) {
+      console.error('Error al obtener el producto:', err);
+      if (err.response?.status === 404) {
+        setError('Producto no encontrado');
+      } else {
+        setError('Error al cargar el producto');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    fetchProduct();
+
+    // Suscribirse a cambios de productos (ej: después de una compra)
+    const unsubscribe = subscribeToChanges('products', fetchProduct);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchProduct]);
 
   const averageRating = reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length

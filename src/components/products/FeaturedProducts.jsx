@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Sparkles, ArrowRight, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { getAll as getAllProducts } from '../../api/products';
 import { getAll as getAllReviews } from '../../api/reviews';
+import { subscribeToChanges } from '../../api/utils';
 import { useCart } from '../../context/CartContext';
 
 const FeaturedProducts = () => {
@@ -14,39 +15,46 @@ const FeaturedProducts = () => {
   const scrollRef = useRef(null);
   const { addToCart } = useCart();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productsData, reviewsData] = await Promise.all([
-          getAllProducts(),
-          getAllReviews()
-        ]);
-        // Ordenar por fecha de creación o ID descendente (últimos ingresos primero)
-        const sorted = [...productsData].sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(b.created_at) - new Date(a.created_at);
-          }
-          return (b.id_key || b.id || 0) - (a.id_key || a.id || 0);
-        });
-        setProducts(sorted.slice(0, 10));
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [productsData, reviewsData] = await Promise.all([
+        getAllProducts(),
+        getAllReviews()
+      ]);
+      // Ordenar por fecha de creación o ID descendente (últimos ingresos primero)
+      const sorted = [...productsData].sort((a, b) => {
+        if (a.created_at && b.created_at) {
+          return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return (b.id_key || b.id || 0) - (a.id_key || a.id || 0);
+      });
+      setProducts(sorted.slice(0, 10));
 
-        const grouped = {};
-        reviewsData.forEach(r => {
-          if (!grouped[r.product_id]) grouped[r.product_id] = [];
-          grouped[r.product_id].push(r);
-        });
-        setReviewsByProduct(grouped);
-      } catch (err) {
-        console.error('Error al obtener productos:', err);
-        setError('No se pudieron cargar los productos');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      const grouped = {};
+      reviewsData.forEach(r => {
+        if (!grouped[r.product_id]) grouped[r.product_id] = [];
+        grouped[r.product_id].push(r);
+      });
+      setReviewsByProduct(grouped);
+    } catch (err) {
+      console.error('Error al obtener productos:', err);
+      setError('No se pudieron cargar los productos');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+
+    // Suscribirse a cambios de productos (ej: después de una compra)
+    const unsubscribe = subscribeToChanges('products', fetchData);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchData]);
 
   const handleAddToCart = (e, product) => {
     e.preventDefault();
@@ -195,10 +203,10 @@ const FeaturedProducts = () => {
                       onClick={(e) => handleAddToCart(e, product)}
                       disabled={product.stock === 0}
                       className={`w-full py-2.5 rounded-full font-medium text-xs transition-all duration-300 flex items-center justify-center gap-2 ${product.stock === 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : addedToCart === product.id_key
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                            : 'bg-neutral-900 text-white hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 hover:-translate-y-0.5 active:translate-y-0'
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : addedToCart === product.id_key
+                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                          : 'bg-neutral-900 text-white hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 hover:-translate-y-0.5 active:translate-y-0'
                         }`}
                     >
                       {addedToCart === product.id_key ? (
