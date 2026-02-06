@@ -63,12 +63,14 @@ export const update = async (id, orderData) => {
 };
 
 /**
- * Actualizar estado de orden - usa PUT con datos completos
+ * Actualizar estado de orden - usa PUT con datos completos (sin id_key)
  */
 export const updateStatus = async (id, status) => {
   try {
     const order = await getById(id);
-    const response = await apiClient.put(`/orders/${id}`, { ...order, status });
+    // Excluir id_key porque el backend no permite actualizarlo
+    const { id_key, ...orderData } = order;
+    const response = await apiClient.put(`/orders/${id}`, { ...orderData, status });
     cacheClear('order');
     cacheClear('orders');
     return response.data;
