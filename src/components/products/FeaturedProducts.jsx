@@ -15,9 +15,9 @@ const FeaturedProducts = () => {
   const scrollRef = useRef(null);
   const { addToCart } = useCart();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [productsData, reviewsData] = await Promise.all([
         getAllProducts(),
         getAllReviews()
@@ -39,17 +39,17 @@ const FeaturedProducts = () => {
       setReviewsByProduct(grouped);
     } catch (err) {
       console.error('Error al obtener productos:', err);
-      setError('No se pudieron cargar los productos');
+      if (!silent) setError('No se pudieron cargar los productos');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchData();
 
-    // Suscribirse a cambios de productos (ej: después de una compra)
-    const unsubscribe = subscribeToChanges('products', fetchData);
+    // Suscribirse a cambios de productos (recarga silenciosa)
+    const unsubscribe = subscribeToChanges('products', () => fetchData(true));
 
     return () => {
       unsubscribe();

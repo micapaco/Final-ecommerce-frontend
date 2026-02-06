@@ -37,10 +37,12 @@ const ProductDetail = () => {
   const cartItem = cart.find(item => item.id_key === parseInt(id));
   const currentCartQuantity = cartItem ? cartItem.quantity : 0;
 
-  const fetchProduct = useCallback(async () => {
+  const fetchProduct = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const data = await getById(id);
       setProduct(data);
 
@@ -73,21 +75,23 @@ const ProductDetail = () => {
       }
     } catch (err) {
       console.error('Error al obtener el producto:', err);
-      if (err.response?.status === 404) {
-        setError('Producto no encontrado');
-      } else {
-        setError('Error al cargar el producto');
+      if (!silent) {
+        if (err.response?.status === 404) {
+          setError('Producto no encontrado');
+        } else {
+          setError('Error al cargar el producto');
+        }
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
     fetchProduct();
 
-    // Suscribirse a cambios de productos (ej: después de una compra)
-    const unsubscribe = subscribeToChanges('products', fetchProduct);
+    // Suscribirse a cambios de productos (recarga silenciosa)
+    const unsubscribe = subscribeToChanges('products', () => fetchProduct(true));
 
     return () => {
       unsubscribe();

@@ -44,9 +44,9 @@ const Products = () => {
     const [reviewsByProduct, setReviewsByProduct] = useState({});
     const { addToCart } = useCart();
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const [productsData, categoriesData, reviewsData] = await Promise.all([
                 getAllProducts(),
                 getAllCategories(),
@@ -65,15 +65,15 @@ const Products = () => {
         } catch (err) {
             console.error('Error:', err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
         fetchData();
 
-        // Suscribirse a cambios de productos (ej: después de una compra)
-        const unsubscribe = subscribeToChanges('products', fetchData);
+        // Suscribirse a cambios de productos (recarga silenciosa)
+        const unsubscribe = subscribeToChanges('products', () => fetchData(true));
 
         return () => {
             unsubscribe();
