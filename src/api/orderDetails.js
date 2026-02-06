@@ -57,6 +57,8 @@ export const create = async (orderDetailData) => {
   try {
     const response = await apiClient.post('/order_details/', orderDetailData);
     cacheClear('orderDetail');
+    // Limpiar caché de productos porque el backend descuenta el stock
+    cacheClear('product');
     return response.data;
   } catch (error) {
     console.error('Error al crear detalle de orden:', error);
@@ -71,6 +73,8 @@ export const update = async (id, orderDetailData) => {
   try {
     const response = await apiClient.put(`/order_details/${id}`, orderDetailData);
     cacheClear('orderDetail');
+    // Limpiar caché de productos porque el backend ajusta el stock
+    cacheClear('product');
     return response.data;
   } catch (error) {
     console.error(`Error al actualizar detalle de orden ${id}:`, error);
@@ -85,6 +89,8 @@ export const deleteOrderDetail = async (id) => {
   try {
     await apiClient.delete(`/order_details/${id}`);
     cacheClear('orderDetail');
+    // Limpiar caché de productos porque el backend restaura el stock
+    cacheClear('product');
   } catch (error) {
     console.error(`Error al eliminar detalle de orden ${id}:`, error);
     throw error;
