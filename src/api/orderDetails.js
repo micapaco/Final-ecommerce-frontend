@@ -26,7 +26,7 @@ export const getByOrderId = async (orderId) => {
   return fetchWithOptimizations(
     cacheKey,
     async () => {
-      const response = await apiClient.get('/order_details', {
+      const response = await apiClient.get('/order_details/', {
         params: { order_id: orderId }
       });
       return response.data;
