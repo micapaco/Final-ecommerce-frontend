@@ -29,7 +29,9 @@ export const getByOrderId = async (orderId) => {
       const response = await apiClient.get('/order_details/', {
         params: { order_id: orderId }
       });
-      return response.data;
+      const data = response.data;
+      // Filtrar por order_id en el frontend por si el backend no filtra
+      return data.filter(detail => detail.order_id === parseInt(orderId));
     },
     { useCache: true, cacheTTL: 1 * 60 * 1000 }
   );
